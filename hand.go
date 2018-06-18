@@ -26,7 +26,7 @@ func (h Hand) Score() int {
 		return sum
 	}
 	for _, card := range h {
-		if card.Rank == deck.Ace {
+		if card.Rank == deck.Ace && sum < 11 {
 			sum += 10
 		}
 	}
