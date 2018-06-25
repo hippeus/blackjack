@@ -40,24 +40,9 @@ func (h humanAI) Play(hand []deck.Card, dealer deck.Card) Move {
 }
 
 func (h humanAI) Result(hand, dealer []deck.Card) {
-	pScore := Score(hand...)
-	dScore := Score(dealer...)
-
-	fmt.Printf("Player's hand: %s.\nScored: %d\n", hand, pScore)
-	fmt.Printf("Dealer's hand: %s.\nScored: %d\n", dealer, dScore)
-
-	switch {
-	case pScore > 21:
-		fmt.Println("You busted")
-	case dScore > 21:
-		fmt.Println("Dealer busted")
-	case pScore > dScore:
-		fmt.Println("You win!")
-	case dScore > pScore:
-		fmt.Println("Dealer wins!")
-	case dScore == pScore:
-		fmt.Println("Draw")
-	}
+	fmt.Printf("***FINAL HANDS***\n")
+	fmt.Printf("Player: %s.\n", hand)
+	fmt.Printf("Dealer: %s.\n", dealer)
 }
 
 type dealerAI struct{}

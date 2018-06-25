@@ -2,7 +2,7 @@ package blackjack
 
 import (
 	"errors"
-	"log"
+	"fmt"
 
 	"github.com/hippeus/deck"
 )
@@ -10,27 +10,53 @@ import (
 type state uint8
 
 const (
-	statePlayerHand state = iota
-	stateDealerHand
+	statePlayerTurn state = iota
+	stateDealerTurn
 	stateHandOver
 )
 
+type Options struct {
+	Decks  uint
+	Rounds uint
+	Wager  uint
+}
+
 type Game struct {
-	state    state
-	shuffled bool
+	state   state
+	nRounds uint
+	houseAI AI
+
 	deck     []deck.Card
-	houseAI  AI
+	nDecks   uint
+	shuffled bool
 
 	player []deck.Card
+	bet    uint
+
 	dealer []deck.Card
 }
 
-func New() Game {
-	return Game{
-		state:   statePlayerHand,
-		deck:    nil,
+func New(opts Options) Game {
+	var g = Game{
+		state:   statePlayerTurn,
 		houseAI: dealerAI{},
+		nRounds: 1,
+		bet:     1,
+		nDecks:  3,
+		deck:    nil,
+		player:  nil,
+		dealer:  nil,
 	}
+	if opts.Wager != 0 {
+		g.bet = opts.Wager
+	}
+	if opts.Rounds != 0 {
+		g.nRounds = opts.Rounds
+	}
+	if opts.Decks != 0 {
+		g.nDecks = opts.Decks
+	}
+	return g
 }
 
 type Move func(*Game) error
@@ -53,9 +79,9 @@ func MoveStand(g *Game) error {
 
 func currentPlayer(g *Game) *[]deck.Card {
 	switch g.state {
-	case statePlayerHand:
+	case statePlayerTurn:
 		return &g.player
-	case stateDealerHand:
+	case stateDealerTurn:
 		return &g.dealer
 	default:
 		// forbidden state
@@ -64,32 +90,68 @@ func currentPlayer(g *Game) *[]deck.Card {
 }
 
 func (g *Game) Play(player AI) int {
-	if !g.shuffled || g.deck == nil {
-		g.deck = deck.New(deck.Deck(3), deck.Shuffle)
-		g.shuffled = true
-	}
-	deal(g)
-	for g.state == statePlayerHand {
-		// TODO(hippeus): protect data by working on copy
-		mv := player.Play(g.player, g.dealer[0])
-		err := mv(g)
-		if err != nil {
-			log.Println(err, g.player)
-			break
+	var win int
+	for i := uint(0); i < g.nRounds; i++ {
+		fmt.Printf("Round: %d\n", i)
+		if len(g.deck) <= int(g.nDecks*52)/3 {
+			g.shuffled = false
 		}
-	}
-	for g.state == stateDealerHand {
-		mv := g.houseAI.Play(g.dealer, g.dealer[0])
-		err := mv(g)
-		if err != nil {
-			log.Println(err, g.dealer)
-			break
+		if !g.shuffled || g.deck == nil {
+			g.deck = deck.New(deck.Deck(3), deck.Shuffle)
+			g.shuffled = true
 		}
+		deal(g)
+		for g.state == statePlayerTurn {
+			hand := make([]deck.Card, len(g.player))
+			copy(hand, g.player)
+			mv := player.Play(hand, g.dealer[0])
+			err := mv(g)
+			if err != nil {
+				break
+			}
+		}
+		for g.state == stateDealerTurn {
+			hand := make([]deck.Card, len(g.dealer))
+			copy(hand, g.dealer)
+			mv := g.houseAI.Play(hand, g.dealer[0])
+			err := mv(g)
+			if err != nil {
+				break
+			}
+		}
+		pScore := Score(g.player...)
+		dScore := Score(g.dealer...)
+
+		player.Result(g.player, g.dealer)
+		roundWin := g.evalResult(pScore, dScore)
+		win += roundWin
+		g.player, g.dealer = nil, nil
+		g.state = statePlayerTurn
 	}
-	player.Result(g.player, g.dealer)
-	return 0
+	return win
 }
 
+func (g *Game) evalResult(pScore, dScore int) int {
+	win := 0
+	switch {
+	case pScore > 21:
+		fmt.Println("You busted")
+		win -= int(g.bet)
+	case dScore > 21:
+		fmt.Println("Dealer busted")
+		win += int(g.bet)
+	case pScore > dScore:
+		fmt.Println("You win!")
+		win += int(g.bet)
+	case dScore > pScore:
+		fmt.Println("Dealer wins!")
+		win -= int(g.bet)
+	case dScore == pScore:
+		fmt.Println("Draw")
+		win = 0
+	}
+	return win
+}
 func draw(cards []deck.Card) (deck.Card, []deck.Card) {
 	card := cards[0]
 	cards[0] = deck.Card{}

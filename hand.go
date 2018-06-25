@@ -2,20 +2,6 @@ package blackjack
 
 import "github.com/hippeus/deck"
 
-// type Hand []deck.Card
-
-// func (h Hand) String() string {
-// 	toString := make([]string, len(h))
-// 	for i := range h {
-// 		toString[i] = h[i].String()
-// 	}
-// 	return strings.Join(toString, ", ")
-// }
-
-// func (h Hand) dealerHand() string {
-// 	return h[0].String() + ", ***HIDDEN***"
-// }
-
 func Score(cards ...deck.Card) int {
 	sum := minScore(cards...)
 	if sum > 11 {
