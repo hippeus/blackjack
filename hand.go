@@ -8,7 +8,7 @@ func Score(cards ...deck.Card) int {
 		return sum
 	}
 	for _, card := range cards {
-		if card.Rank == deck.Ace && sum < 11 {
+		if card.Rank == deck.Ace && sum <= 11 {
 			sum += 10
 		}
 	}

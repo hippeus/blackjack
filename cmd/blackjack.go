@@ -10,5 +10,5 @@ func main() {
 	opts := blackjack.Options{Rounds: 3}
 	game := blackjack.New(opts)
 	wins := game.Play(blackjack.HumanPlayer())
-	fmt.Println(wins)
+	fmt.Printf("Total:%d\n", wins)
 }
